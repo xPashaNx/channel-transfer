@@ -82,6 +82,83 @@ func dtoBeginCustomerToModelTransferRequest(
 	}, nil
 }
 
+func dtoBeginAdminToModelMultiTransferRequest(
+	in *dto.MultiTransferBeginAdminRequest,
+	channels map[string]struct{},
+) (model.MultiTransferRequest, error) {
+	if in.GetGenerals() == nil {
+		return model.MultiTransferRequest{}, ErrBadRequest
+	}
+
+	if err := checkAdminRequestMultiTransfer(in, channels); err != nil {
+		return model.MultiTransferRequest{}, err
+	}
+
+	mappedItems := make([]*model.MultiTransferItemRequest, len(in.GetItems()))
+	for i, item := range in.GetItems() {
+		mappedItems[i] = &model.MultiTransferItemRequest{
+			Token:  item.GetToken(),
+			Amount: item.GetAmount(),
+		}
+	}
+
+	return model.MultiTransferRequest{
+		Request:   model.ID(in.GetGenerals().GetRequestId()),
+		Method:    in.GetGenerals().GetMethodName(),
+		Chaincode: in.GetGenerals().GetChaincode(),
+		Channel:   in.GetGenerals().GetChannel(),
+		Nonce:     in.GetGenerals().GetNonce(),
+		PublicKey: in.GetGenerals().GetPublicKey(),
+		Sign:      in.GetGenerals().GetSign(),
+		Transfer:  model.ID(in.GetIdTransfer()),
+		To:        in.GetChannelTo(),
+		Items:     mappedItems,
+		User:      model.ID(in.GetAddress()),
+		TransferResult: model.TransferResult{
+			Status:  dto.TransferStatusResponse_STATUS_IN_PROCESS.String(),
+			Message: "",
+		},
+	}, nil
+}
+
+func dtoBeginCustomerToModelMultiTransferRequest(
+	in *dto.MultiTransferBeginCustomerRequest,
+	channels map[string]struct{},
+) (model.MultiTransferRequest, error) {
+	if in.GetGenerals() == nil {
+		return model.MultiTransferRequest{}, ErrBadRequest
+	}
+
+	if err := checkCustomerRequestMultiTransfer(in, channels); err != nil {
+		return model.MultiTransferRequest{}, err
+	}
+
+	mappedItems := make([]*model.MultiTransferItemRequest, len(in.GetItems()))
+	for i, item := range in.GetItems() {
+		mappedItems[i] = &model.MultiTransferItemRequest{
+			Token:  item.GetToken(),
+			Amount: item.GetAmount(),
+		}
+	}
+
+	return model.MultiTransferRequest{
+		Request:   model.ID(in.GetGenerals().GetRequestId()),
+		Method:    in.GetGenerals().GetMethodName(),
+		Chaincode: in.GetGenerals().GetChaincode(),
+		Channel:   in.GetGenerals().GetChannel(),
+		Nonce:     in.GetGenerals().GetNonce(),
+		PublicKey: in.GetGenerals().GetPublicKey(),
+		Sign:      in.GetGenerals().GetSign(),
+		Transfer:  model.ID(in.GetIdTransfer()),
+		To:        in.GetChannelTo(),
+		Items:     mappedItems,
+		TransferResult: model.TransferResult{
+			Status:  dto.TransferStatusResponse_STATUS_IN_PROCESS.String(),
+			Message: "",
+		},
+	}, nil
+}
+
 func LedgerBlockToTransferBlock(channel string, block model.BlockData) map[model.ID]*model.TransferBlock {
 	transferBlocks := make(map[model.ID]*model.TransferBlock)
 	for _, tx := range block.Txs {
@@ -246,6 +323,87 @@ func checkCustomerRequestTransfer(
 		tCustomerRequest.GetChannelTo(),
 		tCustomerRequest.GetToken(),
 	)
+}
+
+func checkAdminRequestMultiTransfer(
+	tAdminRequest *dto.MultiTransferBeginAdminRequest,
+	actualChannels map[string]struct{},
+) error {
+	if err := checkGeneral(tAdminRequest.GetGenerals(), actualChannels); err != nil {
+		return err
+	}
+	if tAdminRequest.GetAddress() == "" {
+		return errors.New("address undefined")
+	}
+	if tAdminRequest.GetChannelTo() == "" {
+		return errors.New("channel TO undefined")
+	}
+	if len(tAdminRequest.GetItems()) == 0 {
+		return errors.New("items is empty")
+	}
+	for _, item := range tAdminRequest.GetItems() {
+		if item.GetToken() == "" {
+			return errors.New("token undefined")
+		}
+		if item.GetAmount() == "" {
+			return errors.New("amount undefined")
+		}
+		if _, err := strconv.ParseInt(item.GetAmount(), 10, 64); err != nil {
+			return errors.New("amount is not a number")
+		}
+	}
+
+	for _, item := range tAdminRequest.GetItems() {
+		err := verifyChannels(
+			tAdminRequest.GetGenerals().GetChannel(),
+			tAdminRequest.GetChannelTo(),
+			item.GetToken(),
+		)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func checkCustomerRequestMultiTransfer(
+	tCustomerRequest *dto.MultiTransferBeginCustomerRequest,
+	actualChannels map[string]struct{},
+) error {
+	if err := checkGeneral(tCustomerRequest.GetGenerals(), actualChannels); err != nil {
+		return err
+	}
+	if tCustomerRequest.GetChannelTo() == "" {
+		return errors.New("channel TO undefined")
+	}
+	if len(tCustomerRequest.GetItems()) == 0 {
+		return errors.New("items is empty")
+	}
+	for _, item := range tCustomerRequest.GetItems() {
+		if item.GetToken() == "" {
+			return errors.New("token undefined")
+		}
+		if item.GetAmount() == "" {
+			return errors.New("amount undefined")
+		}
+		if _, err := strconv.ParseInt(item.GetAmount(), 10, 64); err != nil {
+			return errors.New("amount is not a number")
+		}
+	}
+
+	for _, item := range tCustomerRequest.GetItems() {
+		err := verifyChannels(
+			tCustomerRequest.GetGenerals().GetChannel(),
+			tCustomerRequest.GetChannelTo(),
+			item.GetToken(),
+		)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func tokenSymbol(token string) string {

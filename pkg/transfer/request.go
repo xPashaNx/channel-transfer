@@ -30,6 +30,14 @@ func (r *Request) TransferKeep(ctx context.Context, transferRequest model.Transf
 	return nil
 }
 
+func (r *Request) MultiTransferKeep(ctx context.Context, transferRequest model.MultiTransferRequest) error {
+	if err := r.storage.Save(ctx, &transferRequest, data.Key(transferRequest.Transfer)); err != nil {
+		return fmt.Errorf("save request : %w", err)
+	}
+
+	return nil
+}
+
 func (r *Request) TransferFetch(ctx context.Context, transfer model.ID) (model.TransferRequest, error) {
 	transferRequest := model.TransferRequest{}
 	if err := r.storage.Load(ctx, &transferRequest, data.Key(transfer)); err != nil {

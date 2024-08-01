@@ -16,6 +16,10 @@ type RequestController interface {
 	// another.
 	TransferKeep(context.Context, model.TransferRequest) error
 
+	// MultiTransferKeep storage a request to transfer funds from one channel to
+	// another.
+	MultiTransferKeep(context.Context, model.MultiTransferRequest) error
+
 	// TransferFetch retrieves the transfer by ID with updated status and the
 	// result of processing the transfer request.
 	TransferFetch(context.Context, model.ID) (model.TransferRequest, error)
