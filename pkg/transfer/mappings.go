@@ -85,24 +85,24 @@ func dtoBeginCustomerToModelTransferRequest(
 func dtoBeginAdminToModelMultiTransferRequest(
 	in *dto.MultiTransferBeginAdminRequest,
 	channels map[string]struct{},
-) (model.MultiTransferRequest, error) {
+) (model.TransferRequest, error) {
 	if in.GetGenerals() == nil {
-		return model.MultiTransferRequest{}, ErrBadRequest
+		return model.TransferRequest{}, ErrBadRequest
 	}
 
 	if err := checkAdminRequestMultiTransfer(in, channels); err != nil {
-		return model.MultiTransferRequest{}, err
+		return model.TransferRequest{}, err
 	}
 
-	mappedItems := make([]*model.MultiTransferItemRequest, len(in.GetItems()))
+	mappedItems := make([]*model.TransferItemRequest, len(in.GetItems()))
 	for i, item := range in.GetItems() {
-		mappedItems[i] = &model.MultiTransferItemRequest{
+		mappedItems[i] = &model.TransferItemRequest{
 			Token:  item.GetToken(),
 			Amount: item.GetAmount(),
 		}
 	}
 
-	return model.MultiTransferRequest{
+	return model.TransferRequest{
 		Request:   model.ID(in.GetGenerals().GetRequestId()),
 		Method:    in.GetGenerals().GetMethodName(),
 		Chaincode: in.GetGenerals().GetChaincode(),
@@ -124,24 +124,24 @@ func dtoBeginAdminToModelMultiTransferRequest(
 func dtoBeginCustomerToModelMultiTransferRequest(
 	in *dto.MultiTransferBeginCustomerRequest,
 	channels map[string]struct{},
-) (model.MultiTransferRequest, error) {
+) (model.TransferRequest, error) {
 	if in.GetGenerals() == nil {
-		return model.MultiTransferRequest{}, ErrBadRequest
+		return model.TransferRequest{}, ErrBadRequest
 	}
 
 	if err := checkCustomerRequestMultiTransfer(in, channels); err != nil {
-		return model.MultiTransferRequest{}, err
+		return model.TransferRequest{}, err
 	}
 
-	mappedItems := make([]*model.MultiTransferItemRequest, len(in.GetItems()))
+	mappedItems := make([]*model.TransferItemRequest, len(in.GetItems()))
 	for i, item := range in.GetItems() {
-		mappedItems[i] = &model.MultiTransferItemRequest{
+		mappedItems[i] = &model.TransferItemRequest{
 			Token:  item.GetToken(),
 			Amount: item.GetAmount(),
 		}
 	}
 
-	return model.MultiTransferRequest{
+	return model.TransferRequest{
 		Request:   model.ID(in.GetGenerals().GetRequestId()),
 		Method:    in.GetGenerals().GetMethodName(),
 		Chaincode: in.GetGenerals().GetChaincode(),

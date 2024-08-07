@@ -180,7 +180,7 @@ func (api *APIServer) MultiTransferByCustomer(
 			)
 	}
 
-	if err = api.ctrl.MultiTransferKeep(ctx, tr); err != nil {
+	if err = api.ctrl.TransferKeep(ctx, tr); err != nil {
 		return nil, fmt.Errorf(
 			"[APIServer] failed to save transfer request: %w",
 			err,
@@ -227,7 +227,7 @@ func (api *APIServer) MultiTransferByAdmin(
 			)
 	}
 
-	if err = api.ctrl.MultiTransferKeep(ctx, tr); err != nil {
+	if err = api.ctrl.TransferKeep(ctx, tr); err != nil {
 		return nil, fmt.Errorf(
 			"[APIServer] failed to save transfer request: %w",
 			err,
