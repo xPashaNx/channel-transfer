@@ -164,7 +164,9 @@ func LedgerBlockToTransferBlock(channel string, block model.BlockData) map[model
 	for _, tx := range block.Txs {
 		if tx.FuncName != model.TxChannelTransferByCustomer.String() &&
 			tx.FuncName != model.TxChannelTransferByAdmin.String() &&
-			tx.FuncName != model.TxCreateCCTransferTo.String() {
+			tx.FuncName != model.TxCreateCCTransferTo.String() &&
+			tx.FuncName != model.TxChannelMultiTransferByCustomer.String() &&
+			tx.FuncName != model.TxChannelMultiTransferByAdmin.String() {
 			continue
 		}
 
@@ -208,14 +210,18 @@ func BlockToRequest(block model.TransferBlock) (request model.TransferRequest) {
 	request.Transfer = block.Transfer
 	request.Status = dto.TransferStatusResponse_STATUS_UNDEFINED.String()
 	for _, transaction := range block.Transactions {
-		if transaction.FuncName != model.TxChannelTransferByCustomer.String() && transaction.FuncName != model.TxChannelTransferByAdmin.String() {
+		if transaction.FuncName != model.TxChannelTransferByCustomer.String() &&
+			transaction.FuncName != model.TxChannelTransferByAdmin.String() &&
+			transaction.FuncName != model.TxChannelMultiTransferByCustomer.String() &&
+			transaction.FuncName != model.TxChannelMultiTransferByAdmin.String() {
 			continue
 		}
 
 		request.Transfer = block.Transfer
 		offset := 0
 
-		if transaction.FuncName == model.TxChannelTransferByAdmin.String() {
+		if transaction.FuncName == model.TxChannelTransferByAdmin.String() ||
+			transaction.FuncName == model.TxChannelMultiTransferByAdmin.String() {
 			request.User = model.ID(transaction.Args[6])
 			offset = 1
 		}
@@ -223,7 +229,7 @@ func BlockToRequest(block model.TransferBlock) (request model.TransferRequest) {
 		if len(transaction.Args) < 11+offset {
 			continue
 		}
-
+		// TODO: ???
 		request.Method = string(transaction.Args[0])
 		request.Request = model.ID(transaction.Args[1])
 		request.Channel = string(transaction.Args[2])
@@ -246,7 +252,9 @@ func checkGeneral(gp *dto.GeneralParams, actualChannels map[string]struct{}) err
 		return ErrMethod
 	}
 	if gp.GetMethodName() != model.TxChannelTransferByAdmin.String() &&
-		gp.GetMethodName() != model.TxChannelTransferByCustomer.String() {
+		gp.GetMethodName() != model.TxChannelTransferByCustomer.String() &&
+		gp.GetMethodName() != model.TxChannelMultiTransferByAdmin.String() &&
+		gp.GetMethodName() != model.TxChannelMultiTransferByCustomer.String() {
 		return ErrUnknownMethod
 	}
 	if _, ok := actualChannels[gp.GetChannel()]; !ok {
