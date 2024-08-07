@@ -94,9 +94,9 @@ func dtoBeginAdminToModelMultiTransferRequest(
 		return model.TransferRequest{}, err
 	}
 
-	mappedItems := make([]*model.TransferItemRequest, len(in.GetItems()))
+	mappedItems := make([]model.TransferItem, len(in.GetItems()))
 	for i, item := range in.GetItems() {
-		mappedItems[i] = &model.TransferItemRequest{
+		mappedItems[i] = model.TransferItem{
 			Token:  item.GetToken(),
 			Amount: item.GetAmount(),
 		}
@@ -133,9 +133,9 @@ func dtoBeginCustomerToModelMultiTransferRequest(
 		return model.TransferRequest{}, err
 	}
 
-	mappedItems := make([]*model.TransferItemRequest, len(in.GetItems()))
+	mappedItems := make([]model.TransferItem, len(in.GetItems()))
 	for i, item := range in.GetItems() {
-		mappedItems[i] = &model.TransferItemRequest{
+		mappedItems[i] = model.TransferItem{
 			Token:  item.GetToken(),
 			Amount: item.GetAmount(),
 		}
