@@ -110,7 +110,7 @@ message GeneralParams {
   repeated google.protobuf.Option options = 8;
 }
 
-// TransferBeginAdminRequest request for tokens transfer by tokens owner
+// TransferBeginCustomerRequest request for tokens transfer by tokens owner
 message TransferBeginCustomerRequest{
   GeneralParams generals = 1; // general parameters
   string id_transfer = 2; // transfer ID (should be unique)
@@ -132,7 +132,7 @@ message TransferBeginAdminRequest{
 }
 
 // MultiTransferItem item parameters for MultiTransferBeginCustomerRequest and MultiTransferBeginAdminRequest
-message MultiTransferItem{
+message TransferItem{
   string token = 1; // Token to transfer
   string amount = 2; // Amount of token to transfer
 }
@@ -142,7 +142,7 @@ message MultiTransferBeginCustomerRequest{
   GeneralParams generals = 1; // general parameters
   string id_transfer = 2; // transfer ID (should be unique)
   string channel_to = 3; // destination channel
-  repeated MultiTransferItem items = 4; // items to transfer
+  repeated TransferItem items = 4; // items to transfer
   repeated google.protobuf.Option options = 5;
 }
 
@@ -152,7 +152,7 @@ message MultiTransferBeginAdminRequest{
   string id_transfer = 2; // transfer ID (should be unique)
   string channel_to = 3; // destination channel
   string address = 4; // token's owner address
-  repeated MultiTransferItem items = 5; // items to transfer
+  repeated TransferItem items = 5; // items to transfer
   repeated google.protobuf.Option options = 6;
 }
 

@@ -17,7 +17,7 @@ type TransferResult struct {
 	Message string
 }
 
-type TransferItemRequest struct {
+type TransferItem struct {
 	Token  string
 	Amount string
 }
@@ -40,7 +40,7 @@ type TransferRequest struct {
 	To        string
 	Token     string
 	Amount    string
-	Items     []*TransferItemRequest
+	Items     []TransferItem
 }
 
 func (tr *TransferRequest) MarshalBinary() (data []byte, err error) {
