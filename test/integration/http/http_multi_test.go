@@ -1,4 +1,4 @@
-package grpc
+package http
 
 import (
 	"context"
@@ -10,7 +10,9 @@ import (
 	"syscall"
 	"time"
 
-	cligrpc "github.com/anoideaopen/channel-transfer/proto"
+	clihttp "github.com/anoideaopen/channel-transfer/test/integration/clihttp/client"
+	"github.com/anoideaopen/channel-transfer/test/integration/clihttp/client/transfer"
+	"github.com/anoideaopen/channel-transfer/test/integration/clihttp/models"
 	pbfound "github.com/anoideaopen/foundation/proto"
 	"github.com/anoideaopen/foundation/test/integration/cmn"
 	"github.com/anoideaopen/foundation/test/integration/cmn/client"
@@ -18,6 +20,9 @@ import (
 	"github.com/anoideaopen/foundation/test/integration/cmn/runner"
 	"github.com/btcsuite/btcutil/base58"
 	docker "github.com/fsouza/go-dockerclient"
+	"github.com/go-openapi/runtime"
+	httptransport "github.com/go-openapi/runtime/client"
+	"github.com/go-openapi/strfmt"
 	"github.com/google/uuid"
 	"github.com/hyperledger/fabric/integration/nwo"
 	"github.com/hyperledger/fabric/integration/nwo/fabricconfig"
@@ -27,15 +32,15 @@ import (
 	"github.com/onsi/gomega/gbytes"
 	"github.com/tedsuo/ifrit"
 	ginkgomon "github.com/tedsuo/ifrit/ginkgomon_v2"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
-	"google.golang.org/protobuf/types/known/anypb"
-	"google.golang.org/protobuf/types/known/typepb"
-	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
-var _ = Describe("Channel multi transfer GRPC tests", func() {
+const (
+	fnChannelMultiTransferByAdmin    = "channelMultiTransferByAdmin"
+	fnChannelMultiTransferByCustomer = "channelMultiTransferByCustomer"
+)
+
+var _ = Describe("Channel multi transfer HTTP tests", func() {
 	var (
 		testDir          string
 		cli              *docker.Client
@@ -93,13 +98,13 @@ var _ = Describe("Channel multi transfer GRPC tests", func() {
 		feeSetter           *client.UserFoundation
 		feeAddressSetter    *client.UserFoundation
 
-		clientCtx context.Context
-		apiClient cligrpc.APIClient
-		conn      *grpc.ClientConn
+		clientCtx   context.Context
+		transferCli *clihttp.CrossChanelTransfer
+		auth        runtime.ClientAuthInfoWriter
 
-		transferItems              []*cligrpc.TransferItem
-		initialBalances            []*cligrpc.TransferItem
-		expectedIndustrialBalances []*cligrpc.TransferItem
+		transferItems              []*models.ChannelTransferTransferItem
+		initialBalances            []*models.ChannelTransferTransferItem
+		expectedIndustrialBalances []*models.ChannelTransferTransferItem
 	)
 	BeforeEach(func() {
 		By("start redis")
@@ -213,15 +218,11 @@ var _ = Describe("Channel multi transfer GRPC tests", func() {
 			robotProc.Signal(syscall.SIGTERM)
 			Eventually(robotProc.Wait(), network.EventuallyTimeout).Should(Receive())
 		}
+
 		By("stop channel transfer")
 		if channelTransferProc != nil {
 			channelTransferProc.Signal(syscall.SIGTERM)
 			Eventually(channelTransferProc.Wait(), network.EventuallyTimeout).Should(Receive())
-		}
-		By("stop redis " + redisDB.Address())
-		if redisProcess != nil {
-			redisProcess.Signal(syscall.SIGTERM)
-			Eventually(redisProcess.Wait(), time.Minute).Should(Receive())
 		}
 	})
 
@@ -240,7 +241,7 @@ var _ = Describe("Channel multi transfer GRPC tests", func() {
 		client.NBTxInvokeWithSign(network, peer, network.Orderers[0], nil, cmn.ChannelIndustrial, cmn.ChannelIndustrial,
 			admin, "initialize", "", client.NewNonceByTime().Get())
 
-		initialBalances = []*cligrpc.TransferItem{
+		initialBalances = []*models.ChannelTransferTransferItem{
 			{
 				Token:  "INDUSTRIAL_202009",
 				Amount: "10000000000000",
@@ -259,7 +260,7 @@ var _ = Describe("Channel multi transfer GRPC tests", func() {
 			},
 		}
 
-		transferItems = []*cligrpc.TransferItem{
+		transferItems = []*models.ChannelTransferTransferItem{
 			{
 				Token:  "INDUSTRIAL_202009",
 				Amount: "1000000000000",
@@ -278,7 +279,7 @@ var _ = Describe("Channel multi transfer GRPC tests", func() {
 			},
 		}
 
-		expectedIndustrialBalances = []*cligrpc.TransferItem{
+		expectedIndustrialBalances = []*models.ChannelTransferTransferItem{
 			{
 				Token:  "INDUSTRIAL_202009",
 				Amount: "9000000000000",
@@ -298,196 +299,146 @@ var _ = Describe("Channel multi transfer GRPC tests", func() {
 		}
 
 		for _, initial := range initialBalances {
-			group := strings.Split(initial.GetToken(), "_")[1]
+			group := strings.Split(initial.Token, "_")[1]
 
 			client.Query(network, peer, cmn.ChannelIndustrial, cmn.ChannelIndustrial,
-				fabricnetwork.CheckResult(fabricnetwork.CheckIndustrialBalance(group, initial.GetAmount()), nil),
+				fabricnetwork.CheckResult(fabricnetwork.CheckIndustrialBalance(group, initial.Amount), nil),
 				"industrialBalanceOf", admin.AddressBase58Check)
 
 			client.TxInvokeWithSign(network, peer, network.Orderers[0], cmn.ChannelIndustrial, cmn.ChannelIndustrial,
 				admin, "transferIndustrial", "", client.NewNonceByTime().Get(), nil,
-				user.AddressBase58Check, group, initial.GetAmount(), "transfer industrial tokens")
+				user.AddressBase58Check, group, initial.Amount, "transfer industrial tokens")
 
 			client.Query(network, peer, cmn.ChannelIndustrial, cmn.ChannelIndustrial,
-				fabricnetwork.CheckResult(fabricnetwork.CheckIndustrialBalance(group, initial.GetAmount()), nil),
+				fabricnetwork.CheckResult(fabricnetwork.CheckIndustrialBalance(group, initial.Amount), nil),
 				"industrialBalanceOf", user.AddressBase58Check)
 		}
+
+		By("creating http connection")
+		clientCtx = metadata.NewOutgoingContext(context.Background(), metadata.Pairs("authorization", networkFound.ChannelTransfer.AccessToken))
+
+		httpAddress := networkFound.ChannelTransfer.HostAddress + ":" + strconv.FormatUint(uint64(networkFound.ChannelTransfer.Ports[cmn.HttpPort]), 10)
+		transport := httptransport.New(httpAddress, "", nil)
+		transferCli = clihttp.New(transport, strfmt.Default)
+
+		auth = httptransport.APIKeyAuth("authorization", "header", networkFound.ChannelTransfer.AccessToken)
 	})
 
 	It("multi transfer by admin test", func() {
-		By("creating grpc connection")
-		clientCtx = metadata.NewOutgoingContext(context.Background(), metadata.Pairs("authorization", networkFound.ChannelTransfer.AccessToken))
-
-		transportCredentials := insecure.NewCredentials()
-		grpcAddress := networkFound.ChannelTransfer.HostAddress + ":" + strconv.FormatUint(uint64(networkFound.ChannelTransfer.Ports[cmn.GrpcPort]), 10)
-
-		var err error
-
-		conn, err = grpc.NewClient(grpcAddress, grpc.WithTransportCredentials(transportCredentials))
-		Expect(err).NotTo(HaveOccurred())
-		defer func() {
-			err := conn.Close()
-			Expect(err).NotTo(HaveOccurred())
-		}()
-
-		By("creating channel transfer API client")
-		apiClient = cligrpc.NewAPIClient(conn)
+		authOpts := func(c *runtime.ClientOperation) {
+			c.AuthInfo = auth
+		}
 
 		By("creating channel transfer request")
 		items, err := json.Marshal(transferItems)
 		Expect(err).NotTo(HaveOccurred())
 
 		transferID := uuid.NewString()
-		channelTransferArgs := []string{transferID, "CC", user.AddressBase58Check, string(items)}
+		channelTransferArgs := []string{transferID, ccCCUpper, user.AddressBase58Check, string(items)}
 
 		requestID := uuid.NewString()
 		nonce := client.NewNonceByTime().Get()
-		signArgs := append(append([]string{"channelMultiTransferByAdmin", requestID, cmn.ChannelIndustrial, cmn.ChannelIndustrial}, channelTransferArgs...), nonce)
+		signArgs := append(append([]string{fnChannelMultiTransferByAdmin, requestID, cmn.ChannelIndustrial, cmn.ChannelIndustrial}, channelTransferArgs...), nonce)
 		publicKey, sign, err := admin.Sign(signArgs...)
 		Expect(err).NotTo(HaveOccurred())
 
-		transfer := &cligrpc.MultiTransferBeginAdminRequest{
-			Generals: &cligrpc.GeneralParams{
-				MethodName: "channelMultiTransferByAdmin",
-				RequestId:  requestID,
+		transferRequest := &models.ChannelTransferMultiTransferBeginAdminRequest{
+			Generals: &models.ChannelTransferGeneralParams{
+				MethodName: fnChannelMultiTransferByAdmin,
+				RequestID:  requestID,
 				Chaincode:  cmn.ChannelIndustrial,
 				Channel:    cmn.ChannelIndustrial,
 				Nonce:      nonce,
 				PublicKey:  publicKey,
 				Sign:       base58.Encode(sign),
 			},
-			IdTransfer: channelTransferArgs[0],
+			IDTransfer: channelTransferArgs[0],
 			ChannelTo:  channelTransferArgs[1],
 			Address:    channelTransferArgs[2],
 			Items:      transferItems,
 		}
 
-		By("sending multi transfer request")
-		r, err := apiClient.MultiTransferByAdmin(clientCtx, transfer)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(r.Status).To(Equal(cligrpc.TransferStatusResponse_STATUS_IN_PROCESS))
-
-		By("checking multi transfer status")
-		transferStatusRequest := &cligrpc.TransferStatusRequest{
-			IdTransfer: transferID,
-		}
-
-		excludeStatus := cligrpc.TransferStatusResponse_STATUS_IN_PROCESS.String()
-		value, err := anypb.New(wrapperspb.String(excludeStatus))
+		By("sending transfer request")
+		res, err := transferCli.Transfer.MultiTransferByAdmin(&transfer.MultiTransferByAdminParams{Body: transferRequest, Context: clientCtx}, authOpts)
 		Expect(err).NotTo(HaveOccurred())
 
-		transferStatusRequest.Options = append(transferStatusRequest.Options, &typepb.Option{
-			Name:  "excludeStatus",
-			Value: value,
-		})
-
-		ctx, cancel := context.WithTimeout(clientCtx, network.EventuallyTimeout*2)
-		defer cancel()
+		err = checkResponseStatus(res.GetPayload(), models.ChannelTransferTransferStatusResponseStatusSTATUSINPROCESS, "")
+		Expect(err).NotTo(HaveOccurred())
 
 		By("awaiting for channel transfer to respond")
-		statusResponse, err := apiClient.TransferStatus(ctx, transferStatusRequest)
+		err = waitForAnswerAndCheckStatus(clientCtx, transferCli, transferID, authOpts, models.ChannelTransferTransferStatusResponseStatusSTATUSCOMPLETED, "")
 		Expect(err).NotTo(HaveOccurred())
-		Expect(statusResponse.Status).To(Equal(cligrpc.TransferStatusResponse_STATUS_COMPLETED))
 
 		By("checking result balances")
 		for i, expected := range expectedIndustrialBalances {
-			group := strings.Split(expected.GetToken(), "_")[1]
+			group := strings.Split(expected.Token, "_")[1]
 
 			client.Query(network, peer, cmn.ChannelIndustrial, cmn.ChannelIndustrial,
-				fabricnetwork.CheckResult(fabricnetwork.CheckIndustrialBalance(group, expected.GetAmount()), nil),
+				fabricnetwork.CheckResult(fabricnetwork.CheckIndustrialBalance(group, expected.Amount), nil),
 				"industrialBalanceOf", user.AddressBase58Check)
 
 			client.Query(network, peer, cmn.ChannelCC, cmn.ChannelCC,
-				fabricnetwork.CheckResult(fabricnetwork.CheckBalance(transferItems[i].GetAmount()), nil),
-				"allowedBalanceOf", user.AddressBase58Check, transferItems[i].GetToken())
+				fabricnetwork.CheckResult(fabricnetwork.CheckBalance(transferItems[i].Amount), nil),
+				"allowedBalanceOf", user.AddressBase58Check, transferItems[i].Token)
 		}
 	})
 
 	It("multi transfer by customer test", func() {
-		By("creating grpc connection")
-		clientCtx = metadata.NewOutgoingContext(context.Background(), metadata.Pairs("authorization", networkFound.ChannelTransfer.AccessToken))
-
-		transportCredentials := insecure.NewCredentials()
-		grpcAddress := networkFound.ChannelTransfer.HostAddress + ":" + strconv.FormatUint(uint64(networkFound.ChannelTransfer.Ports[cmn.GrpcPort]), 10)
-
-		var err error
-
-		conn, err = grpc.NewClient(grpcAddress, grpc.WithTransportCredentials(transportCredentials))
-		Expect(err).NotTo(HaveOccurred())
-		defer func() {
-			err := conn.Close()
-			Expect(err).NotTo(HaveOccurred())
-		}()
-
-		By("creating channel transfer API client")
-		apiClient = cligrpc.NewAPIClient(conn)
+		authOpts := func(c *runtime.ClientOperation) {
+			c.AuthInfo = auth
+		}
 
 		By("creating channel transfer request")
 		items, err := json.Marshal(transferItems)
 		Expect(err).NotTo(HaveOccurred())
 
 		transferID := uuid.NewString()
-		channelTransferArgs := []string{transferID, "CC", string(items)}
+		channelTransferArgs := []string{transferID, ccCCUpper, string(items)}
 
 		requestID := uuid.NewString()
 		nonce := client.NewNonceByTime().Get()
-		signArgs := append(append([]string{"channelMultiTransferByCustomer", requestID, cmn.ChannelIndustrial, cmn.ChannelIndustrial}, channelTransferArgs...), nonce)
+		signArgs := append(append([]string{fnChannelMultiTransferByCustomer, requestID, cmn.ChannelIndustrial, cmn.ChannelIndustrial}, channelTransferArgs...), nonce)
 		publicKey, sign, err := user.Sign(signArgs...)
 		Expect(err).NotTo(HaveOccurred())
 
-		transfer := &cligrpc.MultiTransferBeginCustomerRequest{
-			Generals: &cligrpc.GeneralParams{
-				MethodName: "channelMultiTransferByCustomer",
-				RequestId:  requestID,
+		transferRequest := &models.ChannelTransferMultiTransferBeginCustomerRequest{
+			Generals: &models.ChannelTransferGeneralParams{
+				MethodName: fnChannelMultiTransferByCustomer,
+				RequestID:  requestID,
 				Chaincode:  cmn.ChannelIndustrial,
 				Channel:    cmn.ChannelIndustrial,
 				Nonce:      nonce,
 				PublicKey:  publicKey,
 				Sign:       base58.Encode(sign),
 			},
-			IdTransfer: channelTransferArgs[0],
+			IDTransfer: channelTransferArgs[0],
 			ChannelTo:  channelTransferArgs[1],
 			Items:      transferItems,
 		}
 
 		By("sending transfer request")
-		r, err := apiClient.MultiTransferByCustomer(clientCtx, transfer)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(r.Status).To(Equal(cligrpc.TransferStatusResponse_STATUS_IN_PROCESS))
-
-		By("checking transfer status")
-		transferStatusRequest := &cligrpc.TransferStatusRequest{
-			IdTransfer: transferID,
-		}
-
-		excludeStatus := cligrpc.TransferStatusResponse_STATUS_IN_PROCESS.String()
-		value, err := anypb.New(wrapperspb.String(excludeStatus))
+		res, err := transferCli.Transfer.MultiTransferByCustomer(&transfer.MultiTransferByCustomerParams{Body: transferRequest, Context: clientCtx}, authOpts)
 		Expect(err).NotTo(HaveOccurred())
 
-		transferStatusRequest.Options = append(transferStatusRequest.Options, &typepb.Option{
-			Name:  "excludeStatus",
-			Value: value,
-		})
-
-		ctx, cancel := context.WithTimeout(clientCtx, network.EventuallyTimeout*2)
-		defer cancel()
+		err = checkResponseStatus(res.GetPayload(), models.ChannelTransferTransferStatusResponseStatusSTATUSINPROCESS, "")
+		Expect(err).NotTo(HaveOccurred())
 
 		By("awaiting for channel transfer to respond")
-		statusResponse, err := apiClient.TransferStatus(ctx, transferStatusRequest)
+		err = waitForAnswerAndCheckStatus(clientCtx, transferCli, transferID, authOpts, models.ChannelTransferTransferStatusResponseStatusSTATUSCOMPLETED, "")
 		Expect(err).NotTo(HaveOccurred())
-		Expect(statusResponse.Status).To(Equal(cligrpc.TransferStatusResponse_STATUS_COMPLETED))
 
 		By("checking result balances")
 		for i, expected := range expectedIndustrialBalances {
-			group := strings.Split(expected.GetToken(), "_")[1]
+			group := strings.Split(expected.Token, "_")[1]
 
 			client.Query(network, peer, cmn.ChannelIndustrial, cmn.ChannelIndustrial,
-				fabricnetwork.CheckResult(fabricnetwork.CheckIndustrialBalance(group, expected.GetAmount()), nil),
+				fabricnetwork.CheckResult(fabricnetwork.CheckIndustrialBalance(group, expected.Amount), nil),
 				"industrialBalanceOf", user.AddressBase58Check)
 
 			client.Query(network, peer, cmn.ChannelCC, cmn.ChannelCC,
-				fabricnetwork.CheckResult(fabricnetwork.CheckBalance(transferItems[i].GetAmount()), nil),
-				"allowedBalanceOf", user.AddressBase58Check, transferItems[i].GetToken())
+				fabricnetwork.CheckResult(fabricnetwork.CheckBalance(transferItems[i].Amount), nil),
+				"allowedBalanceOf", user.AddressBase58Check, transferItems[i].Token)
 		}
 	})
+
 })

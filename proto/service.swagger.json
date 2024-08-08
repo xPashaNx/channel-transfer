@@ -362,7 +362,7 @@
           "type": "array",
           "items": {
             "type": "object",
-            "$ref": "#/definitions/channel_transferMultiTransferItem"
+            "$ref": "#/definitions/channel_transferTransferItem"
           }
         },
         "options": {
@@ -394,7 +394,7 @@
           "type": "array",
           "items": {
             "type": "object",
-            "$ref": "#/definitions/channel_transferMultiTransferItem"
+            "$ref": "#/definitions/channel_transferTransferItem"
           }
         },
         "options": {
@@ -436,7 +436,7 @@
       ],
       "default": "STATUS_IN_PROCESS"
     },
-    "channel_transferMultiTransferItem": {
+    "channel_transferTransferItem": {
       "type": "object",
       "properties": {
         "token": {
