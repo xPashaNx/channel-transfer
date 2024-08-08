@@ -5,10 +5,10 @@ go 1.22.5
 require (
 	github.com/IBM/idemix v0.0.2-0.20231011101252-a4feda90f3f7
 	github.com/anoideaopen/acl v0.0.4-0.20240709131543-bf642c53380c
-	github.com/anoideaopen/channel-transfer v0.0.4
+	github.com/anoideaopen/channel-transfer v0.0.5-0.20240724145918-4e7c5bbd7339
 	github.com/anoideaopen/foundation v0.0.5
 	github.com/anoideaopen/foundation/test/integration v0.0.0-20240722222449-50dbeda831f0
-	github.com/anoideaopen/robot v0.0.2
+	github.com/anoideaopen/robot v0.0.3-0.20240724144307-3051246b9d62
 	github.com/btcsuite/btcutil v1.0.3-0.20201208143702-a53e38424cce
 	github.com/fsouza/go-dockerclient v1.11.1
 	github.com/go-openapi/errors v0.22.0
@@ -17,7 +17,7 @@ require (
 	github.com/go-openapi/swag v0.23.0
 	github.com/go-openapi/validate v0.24.0
 	github.com/google/uuid v1.6.0
-	github.com/hyperledger/fabric v1.4.0-rc1.0.20240406053308-22aaf3468497
+	github.com/hyperledger/fabric v1.4.0-rc1.0.20240719202703-5cec5d2649ad
 	github.com/onsi/ginkgo/v2 v2.19.0
 	github.com/onsi/gomega v1.33.1
 	github.com/tedsuo/ifrit v0.0.0-20230516164442-7862c310ad26
@@ -97,11 +97,11 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.21.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/holiman/uint256 v1.2.4 // indirect
-	github.com/hyperledger-labs/SmartBFT v0.0.0-20240314102917-584daefbad5b // indirect
+	github.com/hyperledger-labs/SmartBFT v0.0.0-20240616160543-3f61a410b8c1 // indirect
 	github.com/hyperledger/fabric-amcl v0.0.0-20230602173724-9e02669dceb2 // indirect
 	github.com/hyperledger/fabric-chaincode-go v0.0.0-20230228194215-b84622ba6a7a // indirect
 	github.com/hyperledger/fabric-config v0.2.1 // indirect
-	github.com/hyperledger/fabric-lib-go v1.1.1 // indirect
+	github.com/hyperledger/fabric-lib-go v1.1.3-0.20240523144151-25edd1eaf5f5 // indirect
 	github.com/hyperledger/fabric-protos-go v0.3.3 // indirect
 	github.com/hyperledger/fabric-sdk-go v1.0.1-0.20210927191040-3e3a3c6aeec9 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
@@ -171,6 +171,7 @@ require (
 	golang.org/x/sys v0.22.0 // indirect
 	golang.org/x/text v0.16.0 // indirect
 	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d // indirect
+	google.golang.org/genproto v0.0.0-20231106174013-bbf56f31fb17 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240723171418-e6d459c13d2a // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240723171418-e6d459c13d2a // indirect
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6 // indirect
@@ -182,5 +183,7 @@ require (
 
 replace (
 	github.com/anoideaopen/channel-transfer => ../../
+	github.com/anoideaopen/foundation => ../../../foundation
+	github.com/anoideaopen/foundation/test/integration => ../../../foundation/test/integration
 	github.com/hyperledger/fabric-sdk-go => github.com/anoideaopen/fabric-sdk-go v0.0.2
 )

@@ -414,7 +414,7 @@ func (x *TransferBeginAdminRequest) GetOptions() []*ptype.Option {
 	return nil
 }
 
-// MultiTransferItem item parameters for MultiTransferBeginCustomerRequest and MultiTransferBeginAdminRequest
+// TransferItem item parameters for MultiTransferBeginCustomerRequest and MultiTransferBeginAdminRequest
 type TransferItem struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache

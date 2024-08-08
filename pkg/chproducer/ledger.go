@@ -157,8 +157,8 @@ func (h *Handler) createMultiTransferFrom(ctx context.Context, request model.Tra
 	}
 
 	if request.Method == model.TxChannelMultiTransferByAdmin.String() {
-		args = append(args[:5], args[4:]...)
-		args[4] = []byte(request.User)
+		args = append(args[:6], args[5:]...)
+		args[5] = []byte(request.User)
 	}
 
 	tArgs := make([]string, 0, len(args))

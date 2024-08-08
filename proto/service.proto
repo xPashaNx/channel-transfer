@@ -131,7 +131,7 @@ message TransferBeginAdminRequest{
   repeated google.protobuf.Option options = 7;
 }
 
-// MultiTransferItem item parameters for MultiTransferBeginCustomerRequest and MultiTransferBeginAdminRequest
+// TransferItem item parameters for MultiTransferBeginCustomerRequest and MultiTransferBeginAdminRequest
 message TransferItem{
   string token = 1; // Token to transfer
   string amount = 2; // Amount of token to transfer
